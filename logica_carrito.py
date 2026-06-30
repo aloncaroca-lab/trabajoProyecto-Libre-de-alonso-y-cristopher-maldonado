@@ -24,6 +24,16 @@ cupones = {
 ARCHIVO_CARRITO = "carrito.json"
 API_URL = "https://api.exchangerate-api.com/v4/latest/USD"
 API_URL_FALLBACK = "https://open.er-api.com/v6/latest/USD"
+CURRENCIES_DESTINO = ["CLP", "EUR", "GBP", "AUD", "CAD", "CHF", "JPY"]
+CURRENCY_LABELS = {
+    "CLP": "Pesos chilenos",
+    "EUR": "Euros",
+    "GBP": "Libras esterlinas",
+    "AUD": "Dólares australianos",
+    "CAD": "Dólares canadienses",
+    "CHF": "Francos suizos",
+    "JPY": "Yenes japoneses",
+}
 
 
 def guardar_datos(carrito: dict) -> bool:
@@ -86,7 +96,7 @@ def vaciar_carrito(carrito: dict) -> dict:
     return carrito
 
 
-def fetch_usd_to_clp():
+def fetch_usd_rates():
     if requests is None:
         print("La librería 'requests' no está instalada. Instálala con: pip install requests")
         return None
@@ -100,17 +110,21 @@ def fetch_usd_to_clp():
                 print(f"Error al obtener la tasa de cambio: {e}")
             continue
         rates = data.get("rates")
-        if rates and "CLP" in rates:
-            return rates["CLP"]
+        if not rates:
+            continue
+        resultado = {sym: rates[sym] for sym in CURRENCIES_DESTINO if sym in rates}
+        if resultado:
+            return resultado
     print("No se pudo obtener la tasa de cambio desde ninguna API.")
     return None
 
 
-def calcular_detalle_convertido(carrito: dict, rate: float) -> list:
+def calcular_detalle_convertido(carrito: dict, rates: dict) -> list:
     detalle = []
     for codigo, cantidad in carrito.items():
         producto = catalogo[codigo]
         subtotal_usd = producto["precio"] * cantidad
-        subtotal_clp = subtotal_usd * rate
-        detalle.append((producto["nombre"], cantidad, subtotal_usd, subtotal_clp))
+        subtotales = {symbol: subtotal_usd * rate for symbol, rate in rates.items()}
+        detalle.append((producto["nombre"], cantidad, subtotal_usd, subtotales))
     return detalle
+z
